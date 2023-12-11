@@ -1,2 +1,2 @@
-# La-petite-M-t-o
+# La-petite-Meteo
 Cube groupe CESI DI 2023 
