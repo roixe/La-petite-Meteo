@@ -1,2 +1,2 @@
-for name in ["Louis", "Eliott","Anthony","Gaelle"]
+for name in ["Louis", "Eliott","Anthony","Gaelle"]:
   print("Hello ", name," !")
