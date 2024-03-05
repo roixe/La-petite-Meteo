@@ -11,6 +11,10 @@ app.config['MYSQL_DB'] = 'la-petite-meteo'
 
 mysql = MySQL(app)
 
+@app.route('/hello')
+def hello():
+  return 'Hello, world!'
+
 @app.route('/sonde', methods = ['GET', 'POST'])
 def sonde():
     if request.method == "POST":
