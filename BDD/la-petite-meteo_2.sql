@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Base de données : `la-petite-meteo`
+-- Base de données : `la-petite-meteo_2`
 --
 
 -- --------------------------------------------------------
@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS `releve` (
   `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `ID_sonde` int NOT NULL,
   PRIMARY KEY (`ID_releve`),
-  KEY `ID_sonde` (`ID_sonde`)
+  KEY `ID_sonde` (`ID_sonde`),
+  CONSTRAINT `fk_releve_sonde` FOREIGN KEY (`ID_sonde`) REFERENCES `sonde` (`ID_sonde`)
 ) ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --

@@ -1,8 +1,8 @@
-from flask import Flask, request
+from flask import Flask, render_template ,request
 from flask_mysqldb import MySQL
 from datetime import datetime
  
-app = Flask(__name__)
+app = Flask(__name__, template_folder='C:\\Users\\eliot\\OneDrive\\Documents\\La petite meteo\\La-petite-Meteo\\Web\\templates')
  
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
@@ -14,6 +14,10 @@ mysql = MySQL(app)
 @app.route('/hello')
 def hello():
   return 'Hello, world!'
+
+@app.route('/index')
+def home():
+    return render_template('index.html')
 
 @app.route('/sonde', methods = ['GET', 'POST'])
 def sonde():
