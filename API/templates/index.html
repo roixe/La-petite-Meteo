@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+    <title>La petite météo</title>
 </head>
 <body class="bg-gray-100 font-sans leading-normal tracking-normal">
 
@@ -9,7 +15,7 @@
 
 			<div class="w-1/6 pl-2 md:pl-0">
 				<a class="text-gray-900 text-base xl:text-xl no-underline hover:no-underline font-bold"  href="index.php">
-					<img class="object-cover h-8" src="images/logo.png"/>
+					<img class="object-cover h-8" src="{{ url_for('static',filename='images/logo.png') }}"/>
 				</a>
             </div>
             <div class="w-1/6 pl-2 md:pl-0">
@@ -437,17 +443,17 @@
     <ul class="list-reset items-center text-sm pt-3">
       <li>
         <a class="inline-block text-gray-600 no-underline hover:text-gray-100 hover:text-underline py-1" href="https://www.facebook.com/lapetitemeteo/" target="_blank">
-          <img class="img-fluid pad" src="images/facebook.png" alt="facebook" width="32px" />
+          <img class="img-fluid pad" src="{{ url_for('static',filename='images/facebook.png') }}" alt="facebook" width="32px" />
         </a>
       </li>
       <li>
         <a class="inline-block text-gray-600 no-underline hover:text-gray-100 hover:text-underline py-1" href="https://www.instagram.com/lapetitemeteo/" target="_blank">
-          <img class="img-fluid pad" src="images/instagram.jpg" alt="instagram" width="32px" />
+          <img class="img-fluid pad" src="{{ url_for('static',filename='images/instagram.jpg') }}" alt="instagram" width="32px" />
         </a>
       </li>
       <li>
-        <a class="inline-block text-gray-600 no-underline hover:text-gray-100 hover:text-underline py-1" href="https://www.twitter.com/lapetitemeteo/" target="_blank">
-          <img class="img-fluid pad" src="images/twiter.png" alt="twitter" width="32px" />
+        <a class="inline-block text-gray-600 no-underline hover:text-gray-100 hover:text-underline py-1" href="https://www.twiter.com/lapetitemeteo/" target="_blank">
+          <img class="img-fluid pad" src="{{ url_for('static',filename='images/twiter.png') }}" alt="twitter" width="32px" />
         </a>
       </li>
     </ul>
