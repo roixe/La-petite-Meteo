@@ -1,5 +1,5 @@
-Nécessité d'installer via PyPi (pip) : flask et flask-mysqldb
-Testé avec un serveur wamp et une BDD sur phpmyadmin
+Nécessité d'installer via PyPi (pip) : flask et mariadb
+Testé avec un serveur wamp et une BDD mariadb
 
 Pour lancer l'API : flask --app app run
-Pour tester : http://localhost:5000/hello
+Pour tester : http://127.0.0.1:5000/

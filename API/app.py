@@ -24,10 +24,22 @@ app = Flask(__name__)
  
 @app.route('/')
 def index():
-  now = datetime.now()
-  date_time = now.strftime("%d/%m/%Y, %H:%M")
-  days = [now + timedelta(days=i) for i in range(7)]
-  return render_template("index.html", date_time=date_time, days=days)
+    now = datetime.now()
+    date_time = now.strftime("%d/%m/%Y, %H:%M")
+    days = [now + timedelta(days=i) for i in range(7)]
+    cur.execute('''  SELECT temperature, humidite, date FROM releve ORDER BY date DESC LIMIT 8 ''')
+    data = cur.fetchall()
+    labels = [row[2].strftime("%H:%M") for row in reversed(data)]
+    temperatures = [row[0] for row in reversed(data)]
+    humidite = [row[1] for row in reversed(data)]
+    return render_template(
+        "index.html", 
+        date_time=date_time, 
+        days=days, 
+        labels=labels, 
+        temperatures=temperatures,
+        humidite=humidite
+    )
 
 @app.route('/nouvelle-sonde', methods = ['GET', 'POST'])
 def ajouter_sonde():
@@ -83,7 +95,7 @@ def releve():
             temperature = request.args['temperature']
             humidity = request.args['humidity']
             now = datetime.now()
-            date = now.strftime("%d/%m/%Y, %H:%M:%S")
+            date = now.replace(second=00).strftime("%Y-%m-%d %H:%M:%S")
             sonde = request.args['sonde']
             cur.execute(''' INSERT INTO releve (temperature, humidite, date, id_sonde) VALUES(%s,%s,%s,%s)''',(temperature,humidity,date,sonde))
         except KeyError:
