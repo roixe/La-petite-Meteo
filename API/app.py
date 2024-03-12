@@ -1,37 +1,80 @@
-from flask import Flask, request
-from flask_mysqldb import MySQL
-from datetime import datetime
- 
+from flask import Flask, request, render_template, redirect, url_for
+import mariadb
+from datetime import datetime, timedelta
+
+""" essai local pc
+    
+    host="localhost",
+    port=3307,
+    user="root",
+    password='',
+    database="lapetitemeteo"
+"""
+
+conn = mariadb.connect(
+    host="localhost",
+    port=3307,
+    user="root",
+    password='',
+    database="lapetitemeteo"
+)
+cur = conn.cursor()
+    
 app = Flask(__name__)
  
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = ''
-app.config['MYSQL_DB'] = 'la-petite-meteo'
+@app.route('/')
+def index():
+  now = datetime.now()
+  date_time = now.strftime("%d/%m/%Y, %H:%M")
+  days = [now + timedelta(days=i) for i in range(7)]
+  return render_template("index.html", date_time=date_time, days=days)
 
-mysql = MySQL(app)
-
-@app.route('/hello')
-def hello():
-  return 'Hello, world!'
-
-@app.route('/sonde', methods = ['GET', 'POST'])
-def sonde():
+@app.route('/nouvelle-sonde', methods = ['GET', 'POST'])
+def ajouter_sonde():
     if request.method == "POST":
         try :
-            name = request.args['name']
-            zone = request.args['zone']
-            cursor = mysql.connection.cursor()
-            cursor.execute(''' INSERT INTO sonde VALUES('', %s,%s)''',(name,zone))
-            mysql.connection.commit()
-            cursor.close()
+            name = request.form.get('nom')
+            zone = request.form.get('zone')
+            if name is None or zone is None : raise KeyError
+            cur.execute(''' INSERT INTO sonde (nom, zone) VALUES(%s,%s)''',(name,zone))
         except KeyError:
             return "Please specify name and zone"
-        return f"Done!!"    
-    cursor = mysql.connection.cursor()
-    cursor.execute(""" SELECT * FROM sonde """)
-    rv = cursor.fetchall()
-    return str(rv)
+        return redirect(url_for('sondes'))
+    else :
+        return render_template("form_add_sonde.html")
+
+
+@app.route('/maj-sonde', methods = ['GET', 'POST'])
+def maj_sonde():
+    if request.method == "POST":
+        try :
+            name = request.form.get('nom')
+            zone = request.form.get('zone')
+            id = request.form.get('sonde-select')
+            if name is None or zone is None  or id == "" : raise KeyError
+            cur.execute(''' UPDATE sonde SET nom = %s, zone = %s WHERE ID_sonde = %s ''', (name, zone, id))
+        except KeyError:
+            return "Please specify name and zone"
+        return redirect(url_for('sondes'))
+    else :
+        cur.execute(''' SELECT * FROM sonde ''')
+        sondes = cur.fetchall()
+        return render_template("form_maj_sonde.html", sondes=sondes)
+
+
+@app.route('/sondes', methods = ['GET', 'POST'])
+def sondes():
+    if request.method == "POST":
+        bouton = request.form['bouton']
+        if bouton == 'maj':
+            return redirect(url_for('maj_sonde'))
+        elif bouton == 'nouveau':
+            return redirect(url_for('ajouter_sonde'))
+    else :
+        cur.execute(''' SELECT * FROM sonde ''')
+        sondes = cur.fetchall()
+        return render_template("sondes.html", sondes=sondes)
+    
 
 @app.route('/releve', methods = ['GET', 'POST'])
 def releve():
@@ -39,18 +82,14 @@ def releve():
         try :
             temperature = request.args['temperature']
             humidity = request.args['humidity']
-            date = datetime.now()
+            now = datetime.now()
+            date = now.strftime("%d/%m/%Y, %H:%M:%S")
             sonde = request.args['sonde']
-            cursor = mysql.connection.cursor()
-            cursor.execute(''' INSERT INTO releve VALUES('', %s,%s,%s,%s)''',(temperature,humidity,date,sonde))
-            mysql.connection.commit()
-            cursor.close()
+            cur.execute(''' INSERT INTO releve (temperature, humidite, date, id_sonde) VALUES(%s,%s,%s,%s)''',(temperature,humidity,date,sonde))
         except KeyError:
             return "Missing information"
         return f"Done!!"
-    cursor = mysql.connection.cursor()
-    cursor.execute(""" SELECT * FROM releve """)
-    rv = cursor.fetchall()
-    return str(rv)
+    else:
+        cur.execute(''' SELECT * FROM releve ''')
+        return cur.fetchall()
 
-app.run(host='localhost', port=5000)
