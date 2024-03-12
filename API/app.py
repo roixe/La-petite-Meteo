@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect, url_for
 import mariadb
 from datetime import datetime, timedelta
 
@@ -29,6 +29,16 @@ def index():
   days = [now + timedelta(days=i) for i in range(7)]
   return render_template("index.html", date_time=date_time, days=days)
 
+@app.route('/gestion-sondes', methods = ['GET', 'POST'])
+def gestion_sondes():
+    if request.method == "POST":
+        bouton = request.form['bouton']
+        if bouton == 'maj':
+            return redirect(url_for('maj_sonde'))
+        elif bouton == 'nouveau':
+            return redirect(url_for('ajouter_sonde'))
+    else :
+        return render_template("gestion_sondes.html")
 
 @app.route('/nouvelle-sonde')
 def ajouter_sonde():
