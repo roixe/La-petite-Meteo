@@ -29,38 +29,8 @@ def index():
   days = [now + timedelta(days=i) for i in range(7)]
   return render_template("index.html", date_time=date_time, days=days)
 
-@app.route('/gestion-sondes', methods = ['GET', 'POST'])
-def gestion_sondes():
-    if request.method == "POST":
-        bouton = request.form['bouton']
-        if bouton == 'maj':
-            return redirect(url_for('maj_sonde'))
-        elif bouton == 'nouveau':
-            return redirect(url_for('ajouter_sonde'))
-    else :
-        return render_template("gestion_sondes.html")
-
-@app.route('/nouvelle-sonde')
+@app.route('/nouvelle-sonde', methods = ['GET', 'POST'])
 def ajouter_sonde():
-    return render_template("form_add_sonde.html")
-
-
-@app.route('/maj-sonde', methods = ['GET', 'POST'])
-def maj_sonde():
-    if request.method == "POST":
-        name = request.form.get('nom')
-        zone = request.form.get('zone')
-        id = request.form.get('sonde-select')
-        cur.execute(''' UPDATE sonde SET nom = %s, zone = %s WHERE ID_sonde = %s ''', (name, zone, id))
-        return "Update done !"
-    else :
-        cur.execute(''' SELECT * FROM sonde ''')
-        sondes = cur.fetchall()
-        return render_template("form_maj_sonde.html", sondes=sondes)
-
-
-@app.route('/sonde', methods = ['GET', 'POST'])
-def sonde():
     if request.method == "POST":
         try :
             name = request.form.get('nom')
@@ -69,10 +39,41 @@ def sonde():
             cur.execute(''' INSERT INTO sonde (nom, zone) VALUES(%s,%s)''',(name,zone))
         except KeyError:
             return "Please specify name and zone"
-        return f"Done!!"  
-    else:
+        return redirect(url_for('sondes'))
+    else :
+        return render_template("form_add_sonde.html")
+
+
+@app.route('/maj-sonde', methods = ['GET', 'POST'])
+def maj_sonde():
+    if request.method == "POST":
+        try :
+            name = request.form.get('nom')
+            zone = request.form.get('zone')
+            id = request.form.get('sonde-select')
+            if name is None or zone is None  or id == "" : raise KeyError
+            cur.execute(''' UPDATE sonde SET nom = %s, zone = %s WHERE ID_sonde = %s ''', (name, zone, id))
+        except KeyError:
+            return "Please specify name and zone"
+        return redirect(url_for('sondes'))
+    else :
         cur.execute(''' SELECT * FROM sonde ''')
-        return cur.fetchall()
+        sondes = cur.fetchall()
+        return render_template("form_maj_sonde.html", sondes=sondes)
+
+
+@app.route('/sondes', methods = ['GET', 'POST'])
+def sondes():
+    if request.method == "POST":
+        bouton = request.form['bouton']
+        if bouton == 'maj':
+            return redirect(url_for('maj_sonde'))
+        elif bouton == 'nouveau':
+            return redirect(url_for('ajouter_sonde'))
+    else :
+        cur.execute(''' SELECT * FROM sonde ''')
+        sondes = cur.fetchall()
+        return render_template("sondes.html", sondes=sondes)
     
 
 @app.route('/releve', methods = ['GET', 'POST'])
