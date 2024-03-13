@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, redirect, url_for
 import mariadb
+import requests
 from datetime import datetime, timedelta
 
 """ essai local pc
@@ -19,7 +20,27 @@ conn = mariadb.connect(
     database="lapetitemeteo"
 )
 cur = conn.cursor()
-    
+
+def get_qualite_air():
+    try :
+        response = requests.get(ATMO_URL)
+        response.raise_for_status()
+        json_data = response.json()
+        qualificatif = json_data.get('data')[0].get("qualificatif")
+        indice = json_data.get('data')[0].get("indice")
+        couleur = json_data.get('data')[0].get("couleur_html")
+        return (str(indice), qualificatif, couleur)
+    except requests.HTTPError: 
+        return 'X', ''
+
+def get_last_data_from_releve():
+    cur.execute('''  SELECT temperature, humidite, date FROM releve ORDER BY date DESC LIMIT 15 ''')
+    data = cur.fetchall()
+    labels = [row[2].strftime("%H:%M") for row in reversed(data)]
+    temperatures = [row[0] for row in reversed(data)]
+    humidite = [row[1] for row in reversed(data)]
+    return labels, temperatures, humidite
+
 app = Flask(__name__)
  
 @app.route('/')
@@ -27,18 +48,16 @@ def index():
     now = datetime.now()
     date_time = now.strftime("%d/%m/%Y, %H:%M")
     days = [now + timedelta(days=i) for i in range(7)]
-    cur.execute('''  SELECT temperature, humidite, date FROM releve ORDER BY date DESC LIMIT 8 ''')
-    data = cur.fetchall()
-    labels = [row[2].strftime("%H:%M") for row in reversed(data)]
-    temperatures = [row[0] for row in reversed(data)]
-    humidite = [row[1] for row in reversed(data)]
+    labels, temperatures, humidite = get_last_data_from_releve()
+    air = get_qualite_air()
     return render_template(
         "index.html", 
         date_time=date_time, 
         days=days, 
         labels=labels, 
         temperatures=temperatures,
-        humidite=humidite
+        humidite=humidite,
+        air=air
     )
 
 @app.route('/nouvelle-sonde', methods = ['GET', 'POST'])
@@ -105,3 +124,4 @@ def releve():
         cur.execute(''' SELECT * FROM releve ''')
         return cur.fetchall()
 
+ATMO_URL = "http://api.atmo-aura.fr/api/v1/communes/38185/indices/atmo?api_token=b382779cc858d7828197537836213a07&date_echeance=now"
