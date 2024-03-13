@@ -14,9 +14,8 @@ from datetime import datetime, timedelta
 
 conn = mariadb.connect(
     host="localhost",
-    port=3307,
-    user="root",
-    password='',
+    user="www-data",
+    password='www-data',
     database="lapetitemeteo"
 )
 cur = conn.cursor()
