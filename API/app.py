@@ -3,12 +3,13 @@ import mariadb
 import requests
 from datetime import datetime, timedelta
 
-""" essai local pc
-    
+ATMO_URL = "http://api.atmo-aura.fr/api/v1/communes/38185/indices/atmo?api_token=b382779cc858d7828197537836213a07&date_echeance=now"
+POLLEN_URL = "https://api.ambeedata.com/latest/pollen/by-lat-lng?lat=45.1875602&lng=5.7357819"
+
+""" API
     host="localhost",
-    port=3307,
-    user="root",
-    password='',
+    user="www-data",
+    password='www-data',
     database="lapetitemeteo"
 """
 
@@ -19,6 +20,29 @@ conn = mariadb.connect(
     database="lapetitemeteo"
 )
 cur = conn.cursor()
+
+def get_pollen():
+    def trad(mesure):
+        match mesure:
+            case "Low":
+                return "Bas"
+            case "Moderate":
+                return "Modéré"
+            case "High":
+                return "Élevé"
+            case "Very High":
+                return "Très élevé"
+    try :
+        response = requests.get(POLLEN_URL, headers={"x-api-key":"74d530040c05eb64ce5180c0d37262718b4baafaf7b5c08cbb90a9640f279258"})
+        response.raise_for_status()
+        json_data = response.json()
+        risk = json_data.get('data')[0].get("Risk")
+        arbre = trad(risk.get('tree_pollen'))
+        graminees = trad(risk.get('weed_pollen'))
+        herbacees = trad(risk.get('grass_pollen'))
+        return (arbre, graminees, herbacees)
+    except requests.HTTPError: 
+        return "-", "-", "-"
 
 def get_qualite_air():
     #ajouter les IP des PC
@@ -34,7 +58,7 @@ def get_qualite_air():
         return '0', ''
 
 def get_last_data_from_releve():
-    cur.execute('''  SELECT temperature, humidite, date FROM releve ORDER BY date DESC LIMIT 15 ''')
+    cur.execute('''  SELECT temperature, humidite, date FROM releve ORDER BY date DESC LIMIT 72 ''')
     data = cur.fetchall()
     labels = [row[2].strftime("%H:%M") for row in reversed(data)]
     temperatures = [row[0] for row in reversed(data)]
@@ -50,6 +74,7 @@ def index():
     days = [now + timedelta(days=i) for i in range(7)]
     labels, temperatures, humidite = get_last_data_from_releve()
     air = get_qualite_air()
+    pollen = get_pollen()
     return render_template(
         "index.html", 
         date_time=date_time, 
@@ -57,7 +82,8 @@ def index():
         labels=labels, 
         temperatures=temperatures,
         humidite=humidite,
-        air=air
+        air=air,
+        pollen=pollen
     )
 
 @app.route('/nouvelle-sonde', methods = ['GET', 'POST'])
@@ -107,7 +133,7 @@ def sondes():
         return render_template("sondes.html", sondes=sondes)
     
 
-@app.route('/releve', methods = ['GET', 'POST'])
+@app.route('/releve', methods = ['POST'])
 def releve():
     if request.method == "POST":
         try :
@@ -120,8 +146,7 @@ def releve():
         except KeyError:
             return "Missing information"
         return f"Done!!"
-    else:
-        cur.execute(''' SELECT * FROM releve ''')
-        return cur.fetchall()
 
-ATMO_URL = "http://api.atmo-aura.fr/api/v1/communes/38185/indices/atmo?api_token=b382779cc858d7828197537836213a07&date_echeance=now"
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
