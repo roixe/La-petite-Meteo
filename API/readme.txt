@@ -1,4 +1,4 @@
-Nécessité d'installer via PyPi (pip) : flask et mariadb
+Nécessité d'installer via PyPi (pip) : flask, requests et mariadb
 Testé avec un serveur wamp et une BDD mariadb
 
 Pour lancer l'API : flask --app app run
