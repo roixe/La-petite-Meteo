@@ -22,6 +22,7 @@ conn = mariadb.connect(
 cur = conn.cursor()
 
 def get_qualite_air():
+    #ajouter les IP des PC
     try :
         response = requests.get(ATMO_URL)
         response.raise_for_status()
@@ -31,7 +32,7 @@ def get_qualite_air():
         couleur = json_data.get('data')[0].get("couleur_html")
         return (str(indice), qualificatif, couleur)
     except requests.HTTPError: 
-        return 'X', ''
+        return '0', ''
 
 def get_last_data_from_releve():
     cur.execute('''  SELECT temperature, humidite, date FROM releve ORDER BY date DESC LIMIT 15 ''')
