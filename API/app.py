@@ -24,15 +24,14 @@ cur = conn.cursor()
 
 def get_pollen():
     def trad(mesure):
-        match mesure:
-            case "Low":
-                return "Bas"
-            case "Moderate":
-                return "Modéré"
-            case "High":
-                return "Élevé"
-            case "Very High":
-                return "Très élevé"
+        if mesure == "Low":
+            return "Bas"
+        elif mesure == "Moderate":
+            return "Modéré"
+        elif mesure == "High":
+            return "Élevé"
+        elif mesure == "Very High":
+            return "Très élevé"
     try :
         response = requests.get(POLLEN_URL, headers={"x-api-key":"74d530040c05eb64ce5180c0d37262718b4baafaf7b5c08cbb90a9640f279258"}, timeout=3)
         response.raise_for_status()
