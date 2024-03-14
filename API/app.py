@@ -6,18 +6,18 @@ from datetime import datetime, timedelta
 ATMO_URL = "http://api.atmo-aura.fr/api/v1/communes/38185/indices/atmo?api_token=b382779cc858d7828197537836213a07&date_echeance=now"
 POLLEN_URL = "https://api.ambeedata.com/latest/pollen/by-lat-lng?lat=45.1875602&lng=5.7357819"
 
-""" API
+""" 
     host="localhost",
-    user="www-data",
-    password='www-data',
+    port=3307,
+    user="root",
+    password='',
     database="lapetitemeteo"
 """
 
 conn = mariadb.connect(
     host="localhost",
-    port=3307,
-    user="root",
-    password='',
+    user="www-data",
+    password='www-data',
     database="lapetitemeteo"
 )
 cur = conn.cursor()

@@ -207,29 +207,6 @@
             document.getElementById('humidite'),
             config_humidite
         );
-
-        function tempSelect(value) {
-            const delta = parseInt(value); 
-    
-            if (value === 6) {
-                labels = labels.slice(-6); 
-                dataValues = [15, 25, 35, 30, 20, 10]; 
-            } else if (value === 12) {
-                labels = labels.slice(-12); ; 
-                dataValues = [20, 30, 40, 35, 25, 15]; 
-            } else if (value === 24) {
-                labels = labels.slice(-24); ; 
-                dataValues = [25, 35, 45, 40, 30];
-            } else if (value === 48) {
-                labels = labels.slice(-48); ; 
-                dataValues = [30, 40, 50]; 
-            }
-    
-            // Mettre à jour le chart avec les nouvelles données
-            chart_temperature.data.labels = labels;
-            chart_temperature.data.datasets[0].data = dataValues;
-            chart_temperature.update();
-        }
     </script>
 </body>
 </html>
