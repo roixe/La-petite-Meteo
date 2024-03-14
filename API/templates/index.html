@@ -12,20 +12,24 @@
 
     <div class="container-fluid">
         <div class="row "><img class="img-fluid mx-auto" style="max-width: 512px" src="{{ url_for('static',filename='images/logo.png') }}" /></div>
-        <div class="row"><small>Live le {{ date_time }} à Grenoble</small></div>
+        <div class="row"><small>Live le {{ now.strftime("%d/%m/%Y, %H:%M") }} à Grenoble</small></div>
     </div>
 
     <nav class="navbar rounded shadow">
         <div class="container-fluid justify-content-center">
             <a class="navbar-brand" href="">Accueil</a>
             <a class="navbar-brand" href="{{ url_for('sondes') }}">Gestion des sondes</a>
+            <a class="navbar-brand" href="{{ url_for('releves') }}">Relevés</a>
         </div>
     </nav>
 
     <div class="container-fluid mx-auto">
         <div class="p-3">
             <div class="border rounded shadow p-2">
-                <div class="row align-items-center">
+                <div class="row p-3">
+                    <h5 class="text-center">Dernier relevé : {{ labels[-1] }}</h5>
+                </div>
+                <div class="row align-items-center last-releve">
                     <div class="col"><img class="img-fluid mx-auto" style="max-width: 100px" src="{{ url_for('static',filename='images/temperature.png') }}" /></div>
                     <div class="col"><h2>{{ temperatures[-1] }}°C</h2></div>
                     <div class="col"><img class="img-fluid mx-auto" style="max-width: 100px" src="{{ url_for('static',filename='images/humidité.png') }}" /></div>
@@ -36,7 +40,14 @@
 
         <div class="p-3">
             <div class="border rounded shadow p-2">
-                <h5 class="font-bold uppercase text-gray-500">Dernières mesures de températures</h5>
+                <h5>Températures</h5>
+                <select class="form-select w-50" name="temp-select" id="temp-select", onchange="tempSelect(this.value)">
+                    <option value="6">Dernières 6h</option>
+                    <option value="12">Dernières 12h</option>
+                    <option value="24">Dernières 24h</option>
+                    <option value="48">Dernières 48h</option>
+                    <option value="72">Dernières 72h</option>
+                </select>
                 <div class="box">
                     <canvas id="temperature"></canvas>
                 </div>
@@ -45,10 +56,17 @@
 
         <div class="p-3">
             <div class="border rounded shadow p-2">
-                    <h5 class="font-bold uppercase text-gray-500">Dernières mesures d'humidité</h5>
-                    <div class="box">
-                        <canvas id="humidite"></canvas>
-                    </div>
+                <h5>Humidité</h5>
+                <select class="form-select w-50" name="temp-select" id="temp-select", onchange="tempSelect(this.value)">
+                    <option value="6">Dernières 6h</option>
+                    <option value="12">Dernières 12h</option>
+                    <option value="24">Dernières 24h</option>
+                    <option value="48">Dernières 48h</option>
+                    <option value="72">Dernières 72h</option>
+                </select>
+                <div class="box">
+                    <canvas id="humidite"></canvas>
+                </div>
             </div>
         </div>
         <!--Divider-->
@@ -128,13 +146,16 @@
     </footer>
         
     <script>
+        
         const labels = {{ labels | tojson }};
+        const temperatures = {{ temperatures | tojson }};
+        const humidites = {{ humidite | tojson }};
         const data_temperature = {
             labels: labels,
             datasets: [{
                 label: 'Températures',
                 borderColor: 'rgb(255, 99, 132)',
-                data:  {{ temperatures | tojson }},
+                data: temperatures,
             }]
         };
 
@@ -143,7 +164,7 @@
             datasets: [{
                 label: 'Humidité',
                 borderColor: 'rgb(128, 42, 126)',
-                data:  {{ humidite | tojson }},
+                data: humidites,
             }]
         };
 
@@ -152,7 +173,13 @@
             data: data_temperature,
             options: { 
                 maintainAspectRatio: false ,
-                pointStyle : false
+                pointStyle : false,
+                plugins : {
+                    legend: {
+                        display: false, // Masquer la légende
+                    }
+                },
+                minHeight: 300 // Hauteur minimale du graphique en pixels
             }
         };
 
@@ -161,7 +188,13 @@
             data: data_humidite,
             options: { 
                 maintainAspectRatio: false ,
-                pointStyle : false
+                pointStyle : false ,
+                plugins : {
+                    legend: {
+                        display: false, // Masquer la légende
+                    }
+                },
+                minHeight: 300 // Hauteur minimale du graphique en pixels
             }
         };
 
@@ -174,6 +207,29 @@
             document.getElementById('humidite'),
             config_humidite
         );
+
+        function tempSelect(value) {
+            const delta = parseInt(value); 
+    
+            if (value === 6) {
+                labels = labels.slice(-6); 
+                dataValues = [15, 25, 35, 30, 20, 10]; 
+            } else if (value === 12) {
+                labels = labels.slice(-12); ; 
+                dataValues = [20, 30, 40, 35, 25, 15]; 
+            } else if (value === 24) {
+                labels = labels.slice(-24); ; 
+                dataValues = [25, 35, 45, 40, 30];
+            } else if (value === 48) {
+                labels = labels.slice(-48); ; 
+                dataValues = [30, 40, 50]; 
+            }
+    
+            // Mettre à jour le chart avec les nouvelles données
+            chart_temperature.data.labels = labels;
+            chart_temperature.data.datasets[0].data = dataValues;
+            chart_temperature.update();
+        }
     </script>
 </body>
 </html>
