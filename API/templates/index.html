@@ -27,13 +27,13 @@
         <div class="p-3">
             <div class="border rounded shadow p-2">
                 <div class="row p-3">
-                    <h5 class="text-center">Dernier relevé : {{ labels[-1] }}</h5>
+                    <h5 class="text-center">Dernier relevé : {{ last[0].strftime("%d/%m %H:%M") }}</h5>
                 </div>
                 <div class="row align-items-center last-releve">
                     <div class="col"><img class="img-fluid mx-auto" style="max-width: 100px" src="{{ url_for('static',filename='images/temperature.png') }}" /></div>
-                    <div class="col"><h2>{{ temperatures[-1] }}°C</h2></div>
-                    <div class="col"><img class="img-fluid mx-auto" style="max-width: 100px" src="{{ url_for('static',filename='images/humidité.png') }}" /></div>
-                    <div class="col"><h3>{{ humidite[-1] }}%</h3></div>
+                    <div class="col"><h2>{{ last[1] }}°C</h2></div>
+                    <div class="col"><img class="img-fluid mx-auto" style="max-width: 100px" src="{{ url_for('static',filename='images/humidite.png') }}" /></div>
+                    <div class="col"><h3>{{ last[2] }}%</h3></div>
                 </div>
             </div>
         </div>
@@ -42,11 +42,12 @@
             <div class="border rounded shadow p-2">
                 <h5>Températures</h5>
                 <select class="form-select w-50" name="temp-select" id="temp-select", onchange="tempSelect(this.value)">
-                    <option value="6">Dernières 6h</option>
-                    <option value="12">Dernières 12h</option>
-                    <option value="24">Dernières 24h</option>
-                    <option value="48">Dernières 48h</option>
-                    <option value="72">Dernières 72h</option>
+                    <option value="6h" selected>Dernières 6h</option>
+                    <option value="12h">Dernières 12h</option>
+                    <option value="24h">Dernières 24h</option>
+                    <option value="48h">Dernières 48h</option>
+                    <option value="7j">7 derniers jours</option>
+                    <option value="14j">14 derniers jours</option>
                 </select>
                 <div class="box">
                     <canvas id="temperature"></canvas>
@@ -57,12 +58,13 @@
         <div class="p-3">
             <div class="border rounded shadow p-2">
                 <h5>Humidité</h5>
-                <select class="form-select w-50" name="temp-select" id="temp-select", onchange="tempSelect(this.value)">
-                    <option value="6">Dernières 6h</option>
-                    <option value="12">Dernières 12h</option>
-                    <option value="24">Dernières 24h</option>
-                    <option value="48">Dernières 48h</option>
-                    <option value="72">Dernières 72h</option>
+                <select class="form-select w-50" name="hum-select" id="hum-select", onchange="humSelect(this.value)">
+                    <option value="6h" selected>Dernières 6h</option>
+                    <option value="12h">Dernières 12h</option>
+                    <option value="24h">Dernières 24h</option>
+                    <option value="48h">Dernières 48h</option>
+                    <option value="7j">7 derniers jours</option>
+                    <option value="14j">14 derniers jours</option>
                 </select>
                 <div class="box">
                     <canvas id="humidite"></canvas>
@@ -78,7 +80,7 @@
                 <div class="row ">
                     <img class="img-fluid mx-auto" src="{{ url_for('static',filename='images/air/' + air[0] + '.png') }}" style="max-width: 300px"/>
                 </div>
-                <div class="row "><h3 class="text-center" style="color: {{ air [2] }};">{{ air[1] }}</h3></div>
+                <div class="row "><h3 class="text-center" style="color: {{ air [2] }};">Grenoble - {{ air[1] }}</h3></div>
             </div>
         </div>
 
@@ -87,19 +89,19 @@
                 <h5>Pollens</h5>
                 <div class="table-responsive">
                     <table class="table">
-                    <tbody>                          
+                    <tbody>
                         <tr>
                             <td class="col-2">Arbre</td>
                             <td class="col-2">{{ pollen[0] }}</td>
-                        </tr>                                
+                        </tr>
                         <tr>
                             <td class="col-2">Graminées</td>
                             <td class="col-2">{{ pollen[1] }}</td>
-                        </tr>                                
+                        </tr>
                         <tr>
                             <td class="col-2">Herbacées</td>
                             <td class="col-2">{{ pollen[2] }}</td>
-                        </tr>                                
+                        </tr>
                     </tbody>
                     </table>
                 </div>
@@ -144,27 +146,22 @@
             </ul>
         </div>
     </footer>
-        
     <script>
-        
-        const labels = {{ labels | tojson }};
-        const temperatures = {{ temperatures | tojson }};
-        const humidites = {{ humidite | tojson }};
         const data_temperature = {
-            labels: labels,
+            labels: [],
             datasets: [{
                 label: 'Températures',
                 borderColor: 'rgb(255, 99, 132)',
-                data: temperatures,
+                data: [],
             }]
         };
 
         const data_humidite = {
-            labels: labels,
+            labels: [],
             datasets: [{
                 label: 'Humidité',
                 borderColor: 'rgb(128, 42, 126)',
-                data: humidites,
+                data: [],
             }]
         };
 
@@ -207,6 +204,27 @@
             document.getElementById('humidite'),
             config_humidite
         );
+
+        var temp = document.getElementById('temp-select').value;
+        var hum = document.getElementById('hum-select').value;
+        tempSelect(temp);
+        humSelect(hum);
+
+        function tempSelect(value){
+            var labels = {{ labels | tojson }};
+            var temperatures = {{ temperatures | tojson }};
+            chart_temperature.data.labels = labels[value];
+            chart_temperature.data.datasets[0].data = temperatures[value];
+            chart_temperature.update();
+        }
+
+        function humSelect(value){
+            var labels = {{ labels | tojson }};
+            var humidites = {{ humidites | tojson }};
+            chart_humidite.data.labels = labels[value];
+            chart_humidite.data.datasets[0].data = humidites[value];
+            chart_humidite.update();
+        }
     </script>
 </body>
 </html>

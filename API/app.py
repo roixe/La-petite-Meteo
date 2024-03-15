@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request, render_template, redirect, url_for
 import mariadb
+import pandas as pd
 import requests
 from datetime import datetime, timedelta
 
@@ -62,29 +63,61 @@ def get_qualite_air():
         return '0', ''
 
 def get_last_data_from_releve():
-    cur.execute('''  SELECT temperature, humidite, date FROM releve ORDER BY date DESC LIMIT 48 ''')
-    data = cur.fetchall()
-    labels = [row[2].strftime("%d/%m %H:%M") for row in reversed(data)]
-    temperatures = [row[0] for row in reversed(data)]
-    humidite = [row[1] for row in reversed(data)]
-    return labels, temperatures, humidite
+    cur.execute('''  SELECT date, temperature, humidite FROM releve ORDER BY date DESC LIMIT 2880 ''')
+    #cur.execute(''' SELECT date, temperature, humidite FROM releve WHERE date BETWEEN DATE_SUB(NOW(), INTERVAL 48 HOUR) AND NOW() ''')
+    rawdata = cur.fetchall()
+    df = pd.DataFrame(rawdata, columns=['date', 'temperature', 'humidite'])
+    df['date'] = pd.to_datetime(df['date'])
+    df.set_index('date', inplace=True)
+    data_15m = df.resample('15min').mean().round().dropna().tail(24)
+    data_30m = df.resample('30min').mean().round().dropna().tail(24)
+    data_1h = df.resample('1h').mean().round().dropna()
+    data_12h = df.resample('12h').mean().round().dropna()
+    data_1j = df.resample('1d').mean().round().dropna()
+    print(data_1j)
+    labels = { 
+              '6h' : data_15m.index.strftime('%H:%M').to_list(),
+              '12h' : data_30m.index.strftime('%H:%M').to_list(),
+              '24h' : data_1h.tail(24).index.strftime('%H:%M').to_list(),
+              '48h' : data_1h.tail(48).index.strftime('%d/%m %H:%M').to_list(),
+              '7j' : data_12h.tail(14).index.strftime('%d/%m %H:%M').to_list(),
+              '14j' : data_1j.tail(14).index.strftime('%d/%m').to_list()
+    }
+    temperatures = { 
+              '6h' : data_15m["temperature"].to_list(),
+              '12h' : data_30m["temperature"].to_list(),
+              '24h' : data_1h["temperature"].tail(24).to_list(),
+              '48h' : data_1h["temperature"].tail(48).to_list(),
+              '7j' : data_12h["temperature"].tail(14).to_list(),
+              '14j' : data_1j["temperature"].tail(14).to_list()
+    }
+    humidites = { 
+              '6h' : data_15m["humidite"].to_list(),
+              '12h' : data_30m["humidite"].to_list(),
+              '24h' : data_1h["humidite"].tail(24).to_list(),
+              '48h' : data_1h["humidite"].tail(48).to_list(),
+              '7j' : data_12h["humidite"].tail(14).to_list(),
+              '14j' : data_1j["humidite"].tail(14).to_list()
+    }
+    return labels, temperatures, humidites
 
 app = Flask(__name__)
 
-@app.route('/')
+@app.route('/accueil')
 def index():
     now = datetime.now()
-    days = [now + timedelta(days=i) for i in range(7)]
-    labels, temperatures, humidite = get_last_data_from_releve()
+    cur.execute('''  SELECT date, temperature, humidite FROM releve ORDER BY date DESC LIMIT 1 ''')
+    last = cur.fetchall()[0]
+    labels, temperatures, humidites = get_last_data_from_releve()
     air = get_qualite_air()
-    pollen = ("Elevé","Bas","Bas") #get_pollen()
+    pollen = get_pollen()
     return render_template(
         "index.html",
         now=now,
-        days=days,
+        last=last,
         labels=labels,
         temperatures=temperatures,
-        humidite=humidite,
+        humidites=humidites,
         air=air,
         pollen=pollen
     )
@@ -145,8 +178,8 @@ def releves():
         data = request.get_json()
         if data is None:
                 return jsonify({'erreur': 'Aucune donnée JSON envoyée'})
-        temperature = data.get('temperature')
-        humidite = data.get('humidity')
+        temperature = data['temperature']
+        humidite = data['humidity']
         now = datetime.now()
         date = now.replace(second=00).strftime("%Y-%m-%d %H:%M:%S")
         sonde = 1 #request.args['sonde']
