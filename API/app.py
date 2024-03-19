@@ -9,6 +9,10 @@ POLLEN_URL = "https://api.ambeedata.com/latest/pollen/by-lat-lng?lat=45.1875602&
 
 """ 
     host="localhost",
+    user="www-data",
+    password='www-data',
+    database="lapetitemeteo"
+    host="localhost",
     port=3307,
     user="root",
     password='',
@@ -74,7 +78,6 @@ def get_last_data_from_releve():
     data_1h = df.resample('1h').mean().round().dropna()
     data_12h = df.resample('12h').mean().round().dropna()
     data_1j = df.resample('1d').mean().round().dropna()
-    print(data_1j)
     labels = { 
               '6h' : data_15m.index.strftime('%H:%M').to_list(),
               '12h' : data_30m.index.strftime('%H:%M').to_list(),
