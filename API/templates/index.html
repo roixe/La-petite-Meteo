@@ -27,13 +27,13 @@
         <div class="p-3">
             <div class="border rounded shadow p-2">
                 <div class="row p-3">
-                    <h5 class="text-center">Dernier relevé : {{ last[0].strftime("%d/%m %H:%M") }}</h5>
+                    <h5 class="text-center">Dernier relevé : {{ most_recent[0].strftime("%d/%m %H:%M") }}</h5>
                 </div>
-                <div class="row align-items-center last-releve">
+                <div class="row align-items-center dernier-releve">
                     <div class="col"><img class="img-fluid mx-auto" style="max-width: 100px" src="{{ url_for('static',filename='images/temperature.png') }}" /></div>
-                    <div class="col"><h2>{{ last[1] }}°C</h2></div>
+                    <div class="col"><h2>{{ most_recent[1] }}°C</h2></div>
                     <div class="col"><img class="img-fluid mx-auto" style="max-width: 100px" src="{{ url_for('static',filename='images/humidite.png') }}" /></div>
-                    <div class="col"><h3>{{ last[2] }}%</h3></div>
+                    <div class="col"><h3>{{ most_recent[2] }}%</h3></div>
                 </div>
             </div>
         </div>
@@ -42,13 +42,12 @@
             <div class="border rounded shadow p-2">
                 <h5>Températures</h5>
                 <select class="form-select w-50" name="temp-select" id="temp-select", onchange="tempSelect(this.value)">
-                    <option value="6h" selected>Dernières 6h</option>
-                    <option value="12h">Dernières 12h</option>
-                    <option value="24h">Dernières 24h</option>
-                    <option value="48h">Dernières 48h</option>
-                    <option value="7j">7 derniers jours</option>
-                    <option value="14j">14 derniers jours</option>
-                </select>
+                            <option value="12h" selected>Dernières 12h</option>
+                            <option value="24h">Dernières 24h</option>
+                            <option value="48h">Dernières 48h</option>
+                            <option value="7j">7 derniers jours</option>
+                            <option value="14j">14 derniers jours</option>
+                        </select>
                 <div class="box">
                     <canvas id="temperature"></canvas>
                 </div>
@@ -59,8 +58,7 @@
             <div class="border rounded shadow p-2">
                 <h5>Humidité</h5>
                 <select class="form-select w-50" name="hum-select" id="hum-select", onchange="humSelect(this.value)">
-                    <option value="6h" selected>Dernières 6h</option>
-                    <option value="12h">Dernières 12h</option>
+                    <option value="12h"selected>Dernières 12h</option>
                     <option value="24h">Dernières 24h</option>
                     <option value="48h">Dernières 48h</option>
                     <option value="7j">7 derniers jours</option>
@@ -147,35 +145,48 @@
         </div>
     </footer>
     <script>
+        var labels = {{ labels | tojson }};
+        var temperatures = {{ temperatures | tojson }};
+        var humidites = {{ humidites | tojson }};
+        var ticks = {{ ticks | tojson }};
+
+        var data_labels = [];
+        {% for sonde in sondes %}
+            data_labels.push("{{sonde[1]}}");
+        {% endfor %}
+
+        const datasets_temperature = [];
+        const datasets_humidite = [];
+        data_labels.forEach(function(element){
+            datasets_temperature.push({
+                label: element,
+                borderColor: `rgb(255, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 150)})`,
+                data: [],
+            });
+            datasets_humidite.push({
+                label: element,
+                borderColor: `rgb(128, ${Math.floor(Math.random() * 150)}, ${Math.floor(Math.random() * 256)})`,
+                data: [],
+            });
+        });
+
         const data_temperature = {
             labels: [],
-            datasets: [{
-                label: 'Températures',
-                borderColor: 'rgb(255, 99, 132)',
-                data: [],
-            }]
+            datasets: datasets_temperature
         };
 
         const data_humidite = {
             labels: [],
-            datasets: [{
-                label: 'Humidité',
-                borderColor: 'rgb(128, 42, 126)',
-                data: [],
-            }]
+            datasets: datasets_humidite
         };
 
         const config_temperature = {
             type: 'line',
             data: data_temperature,
             options: { 
-                maintainAspectRatio: false ,
+                maintainAspectRatio: false,
+                responsive : true,
                 pointStyle : false,
-                plugins : {
-                    legend: {
-                        display: false, // Masquer la légende
-                    }
-                },
                 minHeight: 300 // Hauteur minimale du graphique en pixels
             }
         };
@@ -184,13 +195,9 @@
             type: 'line',
             data: data_humidite,
             options: { 
-                maintainAspectRatio: false ,
-                pointStyle : false ,
-                plugins : {
-                    legend: {
-                        display: false, // Masquer la légende
-                    }
-                },
+                maintainAspectRatio: false,
+                responsive : true,
+                pointStyle : false,
                 minHeight: 300 // Hauteur minimale du graphique en pixels
             }
         };
@@ -211,18 +218,26 @@
         humSelect(hum);
 
         function tempSelect(value){
-            var labels = {{ labels | tojson }};
-            var temperatures = {{ temperatures | tojson }};
             chart_temperature.data.labels = labels[value];
             chart_temperature.data.datasets[0].data = temperatures[value];
+            chart_temperature.data.datasets[1].data = [15,15,15,15,15,15,15,15,15];
+            /*chart_temperature.options.scales.x.ticks = { 
+                callback: function(val, index){
+                    return index % ticks[value][0] === 0 ? this.getLabelForValue(val) : "";
+                }
+            }*/
             chart_temperature.update();
         }
 
         function humSelect(value){
-            var labels = {{ labels | tojson }};
-            var humidites = {{ humidites | tojson }};
             chart_humidite.data.labels = labels[value];
             chart_humidite.data.datasets[0].data = humidites[value];
+            chart_humidite.data.datasets[1].data = [50,50,50,50,50,50,50,50,50,50];
+            /*chart_humidite.options.scales.x.ticks = { 
+                callback: function(val, index){
+                    return index % ticks[value][0] === 0 ? this.getLabelForValue(val) : "";
+                }
+            }*/
             chart_humidite.update();
         }
     </script>

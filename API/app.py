@@ -66,61 +66,70 @@ def get_qualite_air():
     except requests.Timeout:
         return '0', ''
 
+def resample(df:pd.DataFrame, delta, tail):
+    return df.resample(delta).mean().round().dropna().tail(tail)
+
 def get_last_data_from_releve():
-    cur.execute('''  SELECT date, temperature, humidite FROM releve ORDER BY date DESC LIMIT 2880 ''')
     #cur.execute(''' SELECT date, temperature, humidite FROM releve WHERE date BETWEEN DATE_SUB(NOW(), INTERVAL 48 HOUR) AND NOW() ''')
+    cur.execute(''' SELECT date, temperature, humidite FROM releve WHERE date BETWEEN '2024-03-01' AND '2024-03-16' ORDER BY date DESC ''')
     rawdata = cur.fetchall()
+    most_recent = rawdata[0]
     df = pd.DataFrame(rawdata, columns=['date', 'temperature', 'humidite'])
     df['date'] = pd.to_datetime(df['date'])
     df.set_index('date', inplace=True)
-    data_15m = df.resample('15min').mean().round().dropna().tail(24)
-    data_30m = df.resample('30min').mean().round().dropna().tail(24)
-    data_1h = df.resample('1h').mean().round().dropna()
-    data_12h = df.resample('12h').mean().round().dropna()
-    data_1j = df.resample('1d').mean().round().dropna()
+    data_30m = resample(df, '30min', 25)
+    data_1h = resample(df, '1h', 25)
+    data_3h = resample(df, '3h', 17)
+    data_1d = resample(df, '1d', 15)
     labels = { 
-              '6h' : data_15m.index.strftime('%H:%M').to_list(),
               '12h' : data_30m.index.strftime('%H:%M').to_list(),
-              '24h' : data_1h.tail(24).index.strftime('%H:%M').to_list(),
-              '48h' : data_1h.tail(48).index.strftime('%d/%m %H:%M').to_list(),
-              '7j' : data_12h.tail(14).index.strftime('%d/%m %H:%M').to_list(),
-              '14j' : data_1j.tail(14).index.strftime('%d/%m').to_list()
+              '24h' : data_1h.index.strftime('%H:%M').to_list(),
+              '48h' : data_3h.index.strftime('%d/%m %H:%M').to_list(),
+              '7j' : data_1d.tail(8).index.strftime('%d/%m').to_list(),
+              '14j' : data_1d.index.strftime('%d/%m').to_list()
     }
     temperatures = { 
-              '6h' : data_15m["temperature"].to_list(),
               '12h' : data_30m["temperature"].to_list(),
-              '24h' : data_1h["temperature"].tail(24).to_list(),
-              '48h' : data_1h["temperature"].tail(48).to_list(),
-              '7j' : data_12h["temperature"].tail(14).to_list(),
-              '14j' : data_1j["temperature"].tail(14).to_list()
+              '24h' : data_1h["temperature"].to_list(),
+              '48h' : data_3h["temperature"].to_list(),
+              '7j' : data_1d["temperature"].tail(8).to_list(),
+              '14j' : data_1d["temperature"].to_list()
     }
     humidites = { 
-              '6h' : data_15m["humidite"].to_list(),
               '12h' : data_30m["humidite"].to_list(),
-              '24h' : data_1h["humidite"].tail(24).to_list(),
-              '48h' : data_1h["humidite"].tail(48).to_list(),
-              '7j' : data_12h["humidite"].tail(14).to_list(),
-              '14j' : data_1j["humidite"].tail(14).to_list()
+              '24h' : data_1h["humidite"].to_list(),
+              '48h' : data_3h["humidite"].to_list(),
+              '7j' : data_1d["humidite"].tail(8).to_list(),
+              '14j' : data_1d["humidite"].to_list()
     }
-    return labels, temperatures, humidites
+    ticks = {
+        '12h' : (2,0),
+        '24h' : (1,0),
+        '48h' : (3,0),
+        '7j' : (1,0),
+        '14j' : (1,0)
+    }
+    return labels, temperatures, humidites, ticks, most_recent
 
 app = Flask(__name__)
 
 @app.route('/accueil')
 def index():
     now = datetime.now()
-    cur.execute('''  SELECT date, temperature, humidite FROM releve ORDER BY date DESC LIMIT 1 ''')
-    last = cur.fetchall()[0]
-    labels, temperatures, humidites = get_last_data_from_releve()
+    cur.execute('''  SELECT ID_sonde, nom FROM sonde ''')
+    sondes = cur.fetchall()
+    labels, temperatures, humidites, ticks, most_recent = get_last_data_from_releve()
     air = get_qualite_air()
     pollen = get_pollen()
     return render_template(
         "index.html",
         now=now,
-        last=last,
+        sondes=sondes,
+        most_recent=most_recent,
         labels=labels,
         temperatures=temperatures,
         humidites=humidites,
+        ticks=ticks,
         air=air,
         pollen=pollen
     )
