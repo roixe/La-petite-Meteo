@@ -27,13 +27,13 @@
         <div class="p-3">
             <div class="border rounded shadow p-2">
                 <div class="row p-3">
-                    <h5 class="text-center">Dernier relevé : {{ most_recent[0].strftime("%d/%m %H:%M") }}</h5>
+                    <h5 class="text-center">Dernier relevé : {{ data[1]["most recent"][0].strftime("%d/%m %H:%M") }}</h5>
                 </div>
                 <div class="row align-items-center dernier-releve">
                     <div class="col"><img class="img-fluid mx-auto" style="max-width: 100px" src="{{ url_for('static',filename='images/temperature.png') }}" /></div>
-                    <div class="col"><h2>{{ most_recent[1] }}°C</h2></div>
+                    <div class="col"><h2>{{ data[1]["most recent"][1] }}°C</h2></div>
                     <div class="col"><img class="img-fluid mx-auto" style="max-width: 100px" src="{{ url_for('static',filename='images/humidite.png') }}" /></div>
-                    <div class="col"><h3>{{ most_recent[2] }}%</h3></div>
+                    <div class="col"><h3>{{ data[1]["most recent"][2] }}%</h3></div>
                 </div>
             </div>
         </div>
@@ -146,13 +146,15 @@
     </footer>
     <script>
         var labels = {{ labels | tojson }};
-        var temperatures = {{ temperatures | tojson }};
-        var humidites = {{ humidites | tojson }};
-        var ticks = {{ ticks | tojson }};
+        var temperatures_1 = {{ data[1]["temperatures"] | tojson }};
+        var temperatures_2 = {{ data[2]["temperatures"] | tojson }};
+        var humidites_1 = {{ data[1]["humidites"] | tojson }};
+        var humidites_2 = {{ data[2]["humidites"] | tojson }};
+        var ticks = {{ data[1]["ticks"] | tojson }};
 
         var data_labels = [];
         {% for sonde in sondes %}
-            data_labels.push("{{sonde[1]}}");
+            data_labels.push("{{sonde[1]}} - {{sonde[2]}}");
         {% endfor %}
 
         const datasets_temperature = [];
@@ -219,8 +221,8 @@
 
         function tempSelect(value){
             chart_temperature.data.labels = labels[value];
-            chart_temperature.data.datasets[0].data = temperatures[value];
-            chart_temperature.data.datasets[1].data = [15,15,15,15,15,15,15,15,15];
+            chart_temperature.data.datasets[0].data = temperatures_1[value];
+            chart_temperature.data.datasets[1].data = temperatures_2[value];
             /*chart_temperature.options.scales.x.ticks = { 
                 callback: function(val, index){
                     return index % ticks[value][0] === 0 ? this.getLabelForValue(val) : "";
@@ -231,8 +233,8 @@
 
         function humSelect(value){
             chart_humidite.data.labels = labels[value];
-            chart_humidite.data.datasets[0].data = humidites[value];
-            chart_humidite.data.datasets[1].data = [50,50,50,50,50,50,50,50,50,50];
+            chart_humidite.data.datasets[0].data = humidites_1[value];
+            chart_humidite.data.datasets[1].data = humidites_2[value];
             /*chart_humidite.options.scales.x.ticks = { 
                 callback: function(val, index){
                     return index % ticks[value][0] === 0 ? this.getLabelForValue(val) : "";
