@@ -66,61 +66,87 @@ def get_qualite_air():
     except requests.Timeout:
         return '0', ''
 
-def get_last_data_from_releve():
-    cur.execute('''  SELECT date, temperature, humidite FROM releve ORDER BY date DESC LIMIT 2880 ''')
-    #cur.execute(''' SELECT date, temperature, humidite FROM releve WHERE date BETWEEN DATE_SUB(NOW(), INTERVAL 48 HOUR) AND NOW() ''')
-    rawdata = cur.fetchall()
-    df = pd.DataFrame(rawdata, columns=['date', 'temperature', 'humidite'])
-    df['date'] = pd.to_datetime(df['date'])
-    df.set_index('date', inplace=True)
-    data_15m = df.resample('15min').mean().round().dropna().tail(24)
-    data_30m = df.resample('30min').mean().round().dropna().tail(24)
-    data_1h = df.resample('1h').mean().round().dropna()
-    data_12h = df.resample('12h').mean().round().dropna()
-    data_1j = df.resample('1d').mean().round().dropna()
+def get_labels():
+    date_end = datetime(2024, 3, 24, 17, 0, 0)
+    date_start = datetime(2024, 3, 10, 0, 0, 0)
+    index_30min=pd.date_range(start=date_start, end=date_end, freq='30min')
+    index_1h=pd.date_range(start=date_start, end=date_end, freq='1h')
+    index_3h=pd.date_range(start=date_start, end=date_end, freq='3h')
+    index_1d=pd.date_range(start=date_start, end=date_end, freq='1d')
     labels = { 
-              '6h' : data_15m.index.strftime('%H:%M').to_list(),
-              '12h' : data_30m.index.strftime('%H:%M').to_list(),
-              '24h' : data_1h.tail(24).index.strftime('%H:%M').to_list(),
-              '48h' : data_1h.tail(48).index.strftime('%d/%m %H:%M').to_list(),
-              '7j' : data_12h.tail(14).index.strftime('%d/%m %H:%M').to_list(),
-              '14j' : data_1j.tail(14).index.strftime('%d/%m').to_list()
+                '12h' : index_30min.strftime('%H:%M').to_list()[-25:],
+                '24h' : index_1h.strftime('%H:%M').to_list()[-25:],
+                '48h' : index_3h.strftime('%d/%m %H:%M').to_list()[-17:],
+                '7j' : index_1d.strftime('%d/%m').to_list()[-8:],
+                '14j' : index_1d.strftime('%d/%m').to_list()
     }
-    temperatures = { 
-              '6h' : data_15m["temperature"].to_list(),
-              '12h' : data_30m["temperature"].to_list(),
-              '24h' : data_1h["temperature"].tail(24).to_list(),
-              '48h' : data_1h["temperature"].tail(48).to_list(),
-              '7j' : data_12h["temperature"].tail(14).to_list(),
-              '14j' : data_1j["temperature"].tail(14).to_list()
-    }
-    humidites = { 
-              '6h' : data_15m["humidite"].to_list(),
-              '12h' : data_30m["humidite"].to_list(),
-              '24h' : data_1h["humidite"].tail(24).to_list(),
-              '48h' : data_1h["humidite"].tail(48).to_list(),
-              '7j' : data_12h["humidite"].tail(14).to_list(),
-              '14j' : data_1j["humidite"].tail(14).to_list()
-    }
-    return labels, temperatures, humidites
+    return labels
+
+def resample(df:pd.DataFrame, delta, tail):
+    return df.resample(delta).mean().round().dropna().tail(tail)
+
+def get_last_data_from_releve(sondes):
+    #cur.execute(''' SELECT date, temperature, humidite FROM releve WHERE date BETWEEN DATE_SUB(NOW(), INTERVAL 48 HOUR) AND NOW() ''')
+    data = {}
+    for sonde in sondes:
+        cur.execute(f''' 
+                    SELECT date, temperature, humidite
+                    FROM releve
+                    WHERE date BETWEEN '2024-03-09' AND '2024-03-25' AND ID_sonde = {sonde[0]}
+                    ORDER BY date DESC
+        ''')
+        rawdata = cur.fetchall()
+        temp = {}
+        temp["most recent"] = rawdata[0]
+
+        df = pd.DataFrame(rawdata, columns=['date', 'temperature', 'humidite'])
+        df['date'] = pd.to_datetime(df['date'])
+        df.set_index('date', inplace=True)
+        data_30m = resample(df, '30min', 25)
+        data_1h = resample(df, '1h', 25)
+        data_3h = resample(df, '3h', 17)
+        data_1d = resample(df, '1d', 15)
+        temp["temperatures"] = { 
+                '12h' : data_30m["temperature"].to_list(),
+                '24h' : data_1h["temperature"].to_list(),
+                '48h' : data_3h["temperature"].to_list(),
+                '7j' : data_1d["temperature"].tail(8).to_list(),
+                '14j' : data_1d["temperature"].to_list()
+        }
+        temp["humidites"] = { 
+                '12h' : data_30m["humidite"].to_list(),
+                '24h' : data_1h["humidite"].to_list(),
+                '48h' : data_3h["humidite"].to_list(),
+                '7j' : data_1d["humidite"].tail(8).to_list(),
+                '14j' : data_1d["humidite"].to_list()
+        }
+        temp["ticks"] = {
+            '12h' : (2,0),
+            '24h' : (1,0),
+            '48h' : (3,0),
+            '7j' : (1,0),
+            '14j' : (1,0)
+        }
+        data[sonde[0]] = temp
+    return data
 
 app = Flask(__name__)
 
 @app.route('/accueil')
 def index():
     now = datetime.now()
-    cur.execute('''  SELECT date, temperature, humidite FROM releve ORDER BY date DESC LIMIT 1 ''')
-    last = cur.fetchall()[0]
-    labels, temperatures, humidites = get_last_data_from_releve()
+    cur.execute('''  SELECT * FROM sonde ''')
+    sondes = cur.fetchall()
+    labels = get_labels()
+    data = get_last_data_from_releve(sondes)
     air = get_qualite_air()
     pollen = get_pollen()
     return render_template(
         "index.html",
         now=now,
-        last=last,
+        sondes=sondes,
         labels=labels,
-        temperatures=temperatures,
-        humidites=humidites,
+        data=data,
         air=air,
         pollen=pollen
     )
@@ -135,7 +161,10 @@ def traitement():
             return redirect(url_for('ajouter_sonde'))
         elif bouton == "accueil":
             return redirect(url_for('index'))
+        elif bouton == "sondes":
+            return redirect(url_for('sondes'))
 
+#création uniquement avec le premier POST d'une sonde
 @app.route('/nouvelle-sonde', methods = ['GET', 'POST'])
 def ajouter_sonde():
     if request.method == "POST":
@@ -143,14 +172,14 @@ def ajouter_sonde():
             name = request.form.get('nom')
             zone = request.form.get('zone')
             if name is None or zone is None : raise KeyError
-            #cur.execute(''' INSERT INTO sonde (nom, zone) VALUES(%s,%s)''',(name,zone))
+            cur.execute(f''' INSERT INTO sonde (nom, zone) VALUES("{name}","{zone}")''')
         except KeyError:
             return "Please specify name and zone"
         return redirect(url_for('sondes'))
     else :
         return render_template("form_add_sonde.html")
 
-
+#faire une vérif lors de l'appui sur submit
 @app.route('/maj-sonde', methods = ['GET', 'POST'])
 def maj_sonde():
     if request.method == "POST":
@@ -158,8 +187,9 @@ def maj_sonde():
             name = request.form.get('nom')
             zone = request.form.get('zone')
             id = request.form.get('sonde-select')
-            if name is None or zone is None  or id == "" : raise KeyError
-            #cur.execute(''' UPDATE sonde SET nom = %s, zone = %s WHERE ID_sonde = %s ''', (name, zone, id))
+            if id == "" : return redirect(url_for('maj_sonde'))
+            if name is None or zone is None : raise KeyError 
+            cur.execute(f''' UPDATE sonde SET nom = "{name}", zone = "{zone}" WHERE ID_sonde = {id} ''')
         except KeyError:
             return "Please specify name and zone"
         return redirect(url_for('sondes'))
@@ -185,13 +215,17 @@ def releves():
         humidite = data['humidity']
         now = datetime.now()
         date = now.replace(second=00).strftime("%Y-%m-%d %H:%M:%S")
-        sonde = 1 #request.args['sonde']
-        cur.execute(''' INSERT INTO releve (temperature, humidite, date, id_sonde) VALUES(%s,%s,%s,%s)''',(temperature,humidite,date,sonde)) 
+        mac = data["MAC"]
+        #cur.execute(f''' SELECT ID_sonde FROM sonde WHERE mac = "{mac}"''')
+        sonde = 1 #cur.fetchall()[0][0]
+        cur.execute(f''' INSERT INTO releve (temperature, humidite, date, id_sonde) VALUES({temperature},{humidite},"{date}",{sonde})''') 
         return f"Done at {now.strftime('%H:%M:%S')}!!"
     else :
+        cur.execute(''' SELECT ID_sonde, nom FROM sonde ''')
+        sondes = cur.fetchall()
         cur.execute(''' SELECT date, temperature, humidite FROM releve ORDER BY date DESC''')
         releves = cur.fetchall()
-        return render_template("releve.html", releves=releves)
+        return render_template("releve.html", releves=releves, sondes=sondes)
 
 @app.errorhandler(404)
 def page_not_found(e):

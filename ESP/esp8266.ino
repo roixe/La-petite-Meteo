@@ -16,6 +16,8 @@
 //#define STAPSK "ProjetCube" // a changer le cas echeant 
 #define STASSID "Gaellou" // a changer le cas echeant 
 #define STAPSK "connexion56!" // a changer le cas echeant 
+//#define STASSID "NOVA_D6B0" // a changer le cas echeant 
+//#define STAPSK "think8696" // a changer le cas echeant 
 //#define STASSID "NotreProjet" // a changer le cas echeant 
 //#define STAPSK "wvnt0858" // a changer le cas echeant 
 #define FLOAT_TO_INT(x) ((x)>=0?(int)((x)+0.5):(int)((x)-0.5))
@@ -144,11 +146,12 @@ void request_POST(float temp_avg, float hum_avg)
     Serial.print("[HTTP] begin...\n");
     // configure traged server and url
     //http.begin(client, "http://172.20.10.9:5000/releve");  // HTTP
-    http.begin(client, "http://lapetitemeteo/releve");
+    //http.begin(client, "http://lapetitemeteo/releve");
+    http.begin(client, "http://192.168.43.134:5000/releve");
     http.addHeader("Content-Type", "application/json");
  
     char payload[100];
-    sprintf(payload, "{\"temperature\":\%d,\"humidity\":\%d}", temp_avg_int, hum_avg_int);
+    sprintf(payload, "{\"temperature\":\%d,\"humidity\":\%d,\"MAC\":\"\%s\"}", temp_avg_int, hum_avg_int, WiFi.macAddress().c_str());
     Serial.println(payload);
     int httpCode = http.POST(payload);
     //int httpCode = http.GET();
