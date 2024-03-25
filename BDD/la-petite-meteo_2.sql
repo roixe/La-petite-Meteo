@@ -31,6 +31,6 @@ CREATE TABLE IF NOT EXISTS `sonde` (
   `ID_sonde` int NOT NULL AUTO_INCREMENT,
   `Nom` text NOT NULL,
   `Zone` text NOT NULL,
-  `MAC_address` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `MAC_address` text NOT NULL,
   PRIMARY KEY (`ID_sonde`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
