@@ -38,12 +38,6 @@ CREATE TABLE IF NOT EXISTS `releve` (
   KEY `ID_sonde` (`ID_sonde`)
 ) ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Déchargement des données de la table `releve`
---
-
-INSERT INTO `releve` (`ID_releve`, `Temperature`, `Humidite`, `date`, `ID_sonde`) VALUES
-(1, 23, 88, '2024-01-15 13:19:30', 0);
 
 -- --------------------------------------------------------
 
