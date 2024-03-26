@@ -50,6 +50,8 @@ def get_pollen():
         return "-", "-", "-"
     except requests.Timeout:
         return "-", "-", "-"
+    except requests.ConnectionError:
+        return '0', ''
 
 def get_qualite_air():
     try :
@@ -65,6 +67,8 @@ def get_qualite_air():
         return '0', ''
     except requests.Timeout:
         return '0', ''
+    except requests.ConnectionError:
+        return '0', ''
 
 def get_labels():
     date_end = datetime(2024, 3, 24, 17, 0, 0)
@@ -73,21 +77,21 @@ def get_labels():
     index_1h=pd.date_range(start=date_start, end=date_end, freq='1h')
     index_3h=pd.date_range(start=date_start, end=date_end, freq='3h')
     index_1d=pd.date_range(start=date_start, end=date_end, freq='1d')
-    labels = { 
-                '12h' : index_30min.strftime('%H:%M').to_list()[-25:],
-                '24h' : index_1h.strftime('%H:%M').to_list()[-25:],
-                '48h' : index_3h.strftime('%d/%m %H:%M').to_list()[-17:],
-                '7j' : index_1d.strftime('%d/%m').to_list()[-8:],
-                '14j' : index_1d.strftime('%d/%m').to_list()
+    labels = {
+        '12h' : index_30min.strftime('%H:%M').to_list()[-25:],
+        '24h' : index_1h.strftime('%H:%M').to_list()[-25:],
+        '48h' : index_3h.strftime('%d/%m %H:%M').to_list()[-17:],
+        '7j' : index_1d.strftime('%d/%m').to_list()[-8:],
+        '14j' : index_1d.strftime('%d/%m').to_list()
     }
     return labels
 
 def resample(df:pd.DataFrame, delta, tail):
-    return df.resample(delta).mean().round().dropna().tail(tail)
+    return df.resample(delta).mean().round().tail(tail)
 
 def get_last_data_from_releve(sondes):
     #cur.execute(''' SELECT date, temperature, humidite FROM releve WHERE date BETWEEN DATE_SUB(NOW(), INTERVAL 48 HOUR) AND NOW() ''')
-    data = {}
+    data = []
     for sonde in sondes:
         cur.execute(f''' 
                     SELECT date, temperature, humidite
@@ -120,14 +124,7 @@ def get_last_data_from_releve(sondes):
                 '7j' : data_1d["humidite"].tail(8).to_list(),
                 '14j' : data_1d["humidite"].to_list()
         }
-        temp["ticks"] = {
-            '12h' : (2,0),
-            '24h' : (1,0),
-            '48h' : (3,0),
-            '7j' : (1,0),
-            '14j' : (1,0)
-        }
-        data[sonde[0]] = temp
+        data.append(temp)
     return data
 
 app = Flask(__name__)
@@ -157,8 +154,6 @@ def traitement():
         bouton = request.form['bouton']
         if bouton == 'maj_sonde':
             return redirect(url_for('maj_sonde'))
-        elif bouton == 'nouveau_sonde':
-            return redirect(url_for('ajouter_sonde'))
         elif bouton == "accueil":
             return redirect(url_for('index'))
         elif bouton == "sondes":

@@ -146,11 +146,12 @@
     </footer>
     <script>
         var labels = {{ labels | tojson }};
-        var temperatures_1 = {{ data[1]["temperatures"] | tojson }};
-        var temperatures_2 = {{ data[2]["temperatures"] | tojson }};
-        var humidites_1 = {{ data[1]["humidites"] | tojson }};
-        var humidites_2 = {{ data[2]["humidites"] | tojson }};
-        var ticks = {{ data[1]["ticks"] | tojson }};
+        var temperatures = [];
+        var humidites = [];
+        {% for item in data %}
+            temperatures.push({{ item['temperatures'] | tojson }});
+            humidites.push({{ item['humidites'] | tojson }});
+        {% endfor %}
 
         var data_labels = [];
         {% for sonde in sondes %}
@@ -185,10 +186,9 @@
         const config_temperature = {
             type: 'line',
             data: data_temperature,
-            options: { 
+            options: {
                 maintainAspectRatio: false,
                 responsive : true,
-                pointStyle : false,
                 minHeight: 300 // Hauteur minimale du graphique en pixels
             }
         };
@@ -196,10 +196,9 @@
         const config_humidite = {
             type: 'line',
             data: data_humidite,
-            options: { 
+            options: {
                 maintainAspectRatio: false,
                 responsive : true,
-                pointStyle : false,
                 minHeight: 300 // Hauteur minimale du graphique en pixels
             }
         };
@@ -221,25 +220,17 @@
 
         function tempSelect(value){
             chart_temperature.data.labels = labels[value];
-            chart_temperature.data.datasets[0].data = temperatures_1[value];
-            chart_temperature.data.datasets[1].data = temperatures_2[value];
-            /*chart_temperature.options.scales.x.ticks = { 
-                callback: function(val, index){
-                    return index % ticks[value][0] === 0 ? this.getLabelForValue(val) : "";
-                }
-            }*/
+            for (var i = 0; i < temperatures.length; i++) {
+                chart_temperature.data.datasets[i].data = temperatures[i][value];
+            }
             chart_temperature.update();
         }
 
         function humSelect(value){
             chart_humidite.data.labels = labels[value];
-            chart_humidite.data.datasets[0].data = humidites_1[value];
-            chart_humidite.data.datasets[1].data = humidites_2[value];
-            /*chart_humidite.options.scales.x.ticks = { 
-                callback: function(val, index){
-                    return index % ticks[value][0] === 0 ? this.getLabelForValue(val) : "";
-                }
-            }*/
+            for (var i = 0; i < humidites.length; i++) {
+                chart_humidite.data.datasets[i].data = humidites[i][value];
+            }
             chart_humidite.update();
         }
     </script>
