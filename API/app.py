@@ -89,42 +89,64 @@ def get_labels():
 def resample(df:pd.DataFrame, delta, tail):
     return df.resample(delta).mean().round().tail(tail)
 
-def get_last_data_from_releve(sondes):
-    #cur.execute(''' SELECT date, temperature, humidite FROM releve WHERE date BETWEEN DATE_SUB(NOW(), INTERVAL 48 HOUR) AND NOW() ''')
+def get_most_recent(sondes):
+    most_recent = {}
+    cur.execute(f''' 
+                    SELECT date, temperature, humidite, ID_sonde FROM releve 
+                    WHERE (ID_sonde, date) IN 
+                    (   SELECT id_sonde, MAX(date)
+                        AS max_date FROM releve 
+                        GROUP BY id_sonde 
+                    ); 
+    ''')
+    rawdata = cur.fetchall()
+    for data in rawdata:
+        most_recent[data[3]] = (data[0], data[1], data[2])
+    return most_recent
+
+def get_data_from_releve(sondes):
+    """
+                   SELECT date, temperature, humidite 
+                   FROM releve 
+                   WHERE date BETWEEN DATE_SUB(NOW(), INTERVAL 48 HOUR) AND NOW() 
+                   AND ID_sonde = {sonde[0]}
+                   ORDER BY date DESC
+    """
     data = []
     for sonde in sondes:
         cur.execute(f''' 
                     SELECT date, temperature, humidite
                     FROM releve
-                    WHERE date BETWEEN '2024-03-09' AND '2024-03-25' AND ID_sonde = {sonde[0]}
+                    WHERE date BETWEEN '2024-03-09' AND '2024-03-25'
+                    AND ID_sonde = {sonde[0]}
                     ORDER BY date DESC
         ''')
         rawdata = cur.fetchall()
-        temp = {}
-        temp["most recent"] = rawdata[0]
+        if len(rawdata) != 0 :
+            temp = {}
 
-        df = pd.DataFrame(rawdata, columns=['date', 'temperature', 'humidite'])
-        df['date'] = pd.to_datetime(df['date'])
-        df.set_index('date', inplace=True)
-        data_30m = resample(df, '30min', 25)
-        data_1h = resample(df, '1h', 25)
-        data_3h = resample(df, '3h', 17)
-        data_1d = resample(df, '1d', 15)
-        temp["temperatures"] = { 
-                '12h' : data_30m["temperature"].to_list(),
-                '24h' : data_1h["temperature"].to_list(),
-                '48h' : data_3h["temperature"].to_list(),
-                '7j' : data_1d["temperature"].tail(8).to_list(),
-                '14j' : data_1d["temperature"].to_list()
-        }
-        temp["humidites"] = { 
-                '12h' : data_30m["humidite"].to_list(),
-                '24h' : data_1h["humidite"].to_list(),
-                '48h' : data_3h["humidite"].to_list(),
-                '7j' : data_1d["humidite"].tail(8).to_list(),
-                '14j' : data_1d["humidite"].to_list()
-        }
-        data.append(temp)
+            df = pd.DataFrame(rawdata, columns=['date', 'temperature', 'humidite'])
+            df['date'] = pd.to_datetime(df['date'])
+            df.set_index('date', inplace=True)
+            data_30m = resample(df, '30min', 25)
+            data_1h = resample(df, '1h', 25)
+            data_3h = resample(df, '3h', 17)
+            data_1d = resample(df, '1d', 15)
+            temp["temperatures"] = { 
+                    '12h' : data_30m["temperature"].to_list(),
+                    '24h' : data_1h["temperature"].to_list(),
+                    '48h' : data_3h["temperature"].to_list(),
+                    '7j' : data_1d["temperature"].tail(8).to_list(),
+                    '14j' : data_1d["temperature"].to_list()
+            }
+            temp["humidites"] = { 
+                    '12h' : data_30m["humidite"].to_list(),
+                    '24h' : data_1h["humidite"].to_list(),
+                    '48h' : data_3h["humidite"].to_list(),
+                    '7j' : data_1d["humidite"].tail(8).to_list(),
+                    '14j' : data_1d["humidite"].to_list()
+            }
+            data.append(temp)
     return data
 
 app = Flask(__name__)
@@ -135,7 +157,8 @@ def index():
     cur.execute('''  SELECT * FROM sonde ''')
     sondes = cur.fetchall()
     labels = get_labels()
-    data = get_last_data_from_releve(sondes)
+    most_recent = get_most_recent(sondes)
+    data = get_data_from_releve(sondes)
     air = get_qualite_air()
     pollen = get_pollen()
     return render_template(
@@ -143,6 +166,7 @@ def index():
         now=now,
         sondes=sondes,
         labels=labels,
+        most_recent=most_recent,
         data=data,
         air=air,
         pollen=pollen
