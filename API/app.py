@@ -2,21 +2,16 @@ from flask import Flask, jsonify, request, render_template, redirect, url_for
 import mariadb
 import pandas as pd
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
+from werkzeug.exceptions import UnsupportedMediaType
 
 ATMO_URL = "http://api.atmo-aura.fr/api/v1/communes/38185/indices/atmo?api_token=b382779cc858d7828197537836213a07&date_echeance=now"
 POLLEN_URL = "https://api.ambeedata.com/latest/pollen/by-lat-lng?lat=45.1875602&lng=5.7357819"
 
 """ 
-    host="localhost",
-    user="www-data",
-    password='www-data',
-    database="lapetitemeteo"
-    host="localhost",
     port=3307,
     user="root",
     password='',
-    database="lapetitemeteo"
 """
 
 conn = mariadb.connect(
@@ -89,7 +84,7 @@ def get_labels():
 def resample(df:pd.DataFrame, delta, tail):
     return df.resample(delta).mean().round().tail(tail)
 
-def get_most_recent(sondes):
+def get_most_recent():
     most_recent = {}
     cur.execute(f''' 
                     SELECT date, temperature, humidite, ID_sonde FROM releve 
@@ -149,6 +144,15 @@ def get_data_from_releve(sondes):
             data.append(temp)
     return data
 
+def check_sonde(mac):
+    cur.execute(f''' SELECT ID_sonde FROM sonde WHERE mac = "{mac}"''')
+    rawdata=cur.fetchall()
+    if len(rawdata) == 0 :
+        cur.execute(f''' INSERT INTO sonde (nom, zone, mac) VALUES("new","new", "{mac}")''')
+        cur.execute(f''' SELECT ID_sonde FROM sonde WHERE mac = "{mac}"''')
+        rawdata=cur.fetchall()
+    return rawdata[0]
+
 app = Flask(__name__)
 
 @app.route('/accueil')
@@ -157,7 +161,7 @@ def index():
     cur.execute('''  SELECT * FROM sonde ''')
     sondes = cur.fetchall()
     labels = get_labels()
-    most_recent = get_most_recent(sondes)
+    most_recent = get_most_recent()
     data = get_data_from_releve(sondes)
     air = get_qualite_air()
     pollen = get_pollen()
@@ -183,40 +187,20 @@ def traitement():
         elif bouton == "sondes":
             return redirect(url_for('sondes'))
 
-#création uniquement avec le premier POST d'une sonde
-@app.route('/nouvelle-sonde', methods = ['GET', 'POST'])
-def ajouter_sonde():
-    if request.method == "POST":
-        try :
-            name = request.form.get('nom')
-            zone = request.form.get('zone')
-            if name is None or zone is None : raise KeyError
-            cur.execute(f''' INSERT INTO sonde (nom, zone) VALUES("{name}","{zone}")''')
-        except KeyError:
-            return "Please specify name and zone"
-        return redirect(url_for('sondes'))
-    else :
-        return render_template("form_add_sonde.html")
-
-#faire une vérif lors de l'appui sur submit
 @app.route('/maj-sonde', methods = ['GET', 'POST'])
 def maj_sonde():
     if request.method == "POST":
-        try :
-            name = request.form.get('nom')
-            zone = request.form.get('zone')
-            id = request.form.get('sonde-select')
-            if id == "" : return redirect(url_for('maj_sonde'))
-            if name is None or zone is None : raise KeyError 
-            cur.execute(f''' UPDATE sonde SET nom = "{name}", zone = "{zone}" WHERE ID_sonde = {id} ''')
-        except KeyError:
-            return "Please specify name and zone"
+        name = request.form.get('nom')
+        zone = request.form.get('zone')
+        id = request.form.get('sonde-select')
+        if id == "" or name is None or zone is None or id is None: 
+            return redirect(url_for('sondes'))
+        cur.execute(f''' UPDATE sonde SET nom = "{name}", zone = "{zone}" WHERE ID_sonde = {id} ''')
         return redirect(url_for('sondes'))
     else :
         cur.execute(''' SELECT * FROM sonde ''')
         sondes = cur.fetchall()
         return render_template("form_maj_sonde.html", sondes=sondes)
-
 
 @app.route('/sondes', methods = ['GET'])
 def sondes():
@@ -227,24 +211,24 @@ def sondes():
 @app.route('/releve', methods = ['GET', 'POST'])
 def releves():
     if request.method == "POST":
-        data = request.get_json()
-        if data is None:
-                return jsonify({'erreur': 'Aucune donnée JSON envoyée'})
-        temperature = data['temperature']
-        humidite = data['humidity']
-        now = datetime.now()
-        date = now.replace(second=00).strftime("%Y-%m-%d %H:%M:%S")
-        mac = data["MAC"]
-        #cur.execute(f''' SELECT ID_sonde FROM sonde WHERE mac = "{mac}"''')
-        sonde = 1 #cur.fetchall()[0][0]
-        cur.execute(f''' INSERT INTO releve (temperature, humidite, date, id_sonde) VALUES({temperature},{humidite},"{date}",{sonde})''') 
-        return f"Done at {now.strftime('%H:%M:%S')}!!"
+        try :
+            data = request.get_json()
+            temperature = data['temperature']
+            humidite = data['humidity']
+            now = datetime.now()
+            date = now.replace(second=00).strftime("%Y-%m-%d %H:%M:%S")
+            mac = data["MAC"]
+            sonde = check_sonde(mac)
+            cur.execute(f''' INSERT INTO releve (temperature, humidite, date, id_sonde) VALUES({temperature},{humidite},"{date}",{sonde})''') 
+            return f"Done at {now.strftime('%H:%M:%S')}!!"
+        except UnsupportedMediaType:
+            return 'Type de média non pris en charge'
+        except KeyError:
+            return 'Données manquantes'
     else :
-        cur.execute(''' SELECT ID_sonde, nom FROM sonde ''')
-        sondes = cur.fetchall()
         cur.execute(''' SELECT date, temperature, humidite FROM releve ORDER BY date DESC''')
         releves = cur.fetchall()
-        return render_template("releve.html", releves=releves, sondes=sondes)
+        return render_template("releve.html", releves=releves)
 
 @app.errorhandler(404)
 def page_not_found(e):
