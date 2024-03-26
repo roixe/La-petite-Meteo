@@ -12,7 +12,6 @@
 
     <div class="container-fluid">
         <div class="row "><img class="img-fluid mx-auto" style="max-width: 512px" src="{{ url_for('static',filename='images/logo.png') }}" /></div>
-        <div class="row"><small>Live le {{ now.strftime("%d/%m/%Y, %H:%M") }} à Grenoble</small></div>
     </div>
 
     <nav class="navbar rounded shadow">
@@ -27,13 +26,28 @@
         <div class="p-3">
             <div class="border rounded shadow p-2">
                 <div class="row p-3">
-                    <h5 class="text-center">Dernier relevé : {{ data[1]["most recent"][0].strftime("%d/%m %H:%M") }}</h5>
+                    <div class="col"><h5 class="text-center" id="dateValue">Dernier relevé : --</h5></div>
+                    <div class="col">
+                        <select class="form-select w-50" name="sonde-select" id="sonde-select", onchange="sondeSelect(this.value)">
+                            {% for sonde in sondes %}
+                            <option value="{{ sonde[0] }}">{{ sonde[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
-                <div class="row align-items-center dernier-releve">
-                    <div class="col"><img class="img-fluid mx-auto" style="max-width: 100px" src="{{ url_for('static',filename='images/temperature.png') }}" /></div>
-                    <div class="col"><h2>{{ data[1]["most recent"][1] }}°C</h2></div>
-                    <div class="col"><img class="img-fluid mx-auto" style="max-width: 100px" src="{{ url_for('static',filename='images/humidite.png') }}" /></div>
-                    <div class="col"><h3>{{ data[1]["most recent"][2] }}%</h3></div>
+                <div class="row dernier-releve">
+                    <div class="col">
+                        <div class="row align-items-center">
+                        <div class="col"><img class="img-fluid mx-auto" style="max-width: 100px" src="{{ url_for('static',filename='images/temperature.png') }}" /></div>
+                        <div class="col"><h3 class="text-center" id="temperatureValue">--°C</h3></div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="row align-items-center">
+                        <div class="col"><img class="img-fluid mx-auto" style="max-width: 100px" src="{{ url_for('static',filename='images/humidite.png') }}" /></div>
+                        <div class="col"><h3 class="text-center" id="humidityValue">--%</h3></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -42,12 +56,12 @@
             <div class="border rounded shadow p-2">
                 <h5>Températures</h5>
                 <select class="form-select w-50" name="temp-select" id="temp-select", onchange="tempSelect(this.value)">
-                            <option value="12h" selected>Dernières 12h</option>
-                            <option value="24h">Dernières 24h</option>
-                            <option value="48h">Dernières 48h</option>
-                            <option value="7j">7 derniers jours</option>
-                            <option value="14j">14 derniers jours</option>
-                        </select>
+                    <option value="12h" selected>Dernières 12h</option>
+                    <option value="24h">Dernières 24h</option>
+                    <option value="48h">Dernières 48h</option>
+                    <option value="7j">7 derniers jours</option>
+                    <option value="14j">14 derniers jours</option>
+                </select>
                 <div class="box">
                     <canvas id="temperature"></canvas>
                 </div>
@@ -215,8 +229,10 @@
 
         var temp = document.getElementById('temp-select').value;
         var hum = document.getElementById('hum-select').value;
+        var sonde = document.getElementById('sonde-select').value;
         tempSelect(temp);
         humSelect(hum);
+        sondeSelect(sonde);
 
         function tempSelect(value){
             chart_temperature.data.labels = labels[value];
@@ -232,6 +248,22 @@
                 chart_humidite.data.datasets[i].data = humidites[i][value];
             }
             chart_humidite.update();
+        }
+
+        function sondeSelect(sondeID) {
+            var date = "Dernier relevé : --";
+            var temperature = "--°C";
+            var humidite = "--%";
+            {% for ID_sonde, data in most_recent.items() %}
+                if ("{{ ID_sonde }}"  === sondeID) {
+                    date = "Dernier relevé : {{ data[0] }}"
+                    temperature = "{{ data[1] }}°C";
+                    humidite = "{{ data[2] }}%";
+                }
+            {% endfor %}
+            document.getElementById('dateValue').innerText  = date;
+            document.getElementById('temperatureValue').innerText  = temperature;
+            document.getElementById('humidityValue').innerText = humidite;
         }
     </script>
 </body>
