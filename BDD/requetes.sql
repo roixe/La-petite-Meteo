@@ -3,7 +3,7 @@ GRANT ALL PRIVILEGES ON *.* to 'www-data'@'localhost' IDENTIFIED BY 'www-data';
 
 ALTER TABLE sonde ADD MAC_address text NOT NULL;
 
-/* Récupérer les derniers relevés pour chaque sonde */
+/* Récupérer le derniers relevé pour chaque sonde */
 SELECT date, temperature, humidite, ID_sonde FROM releve
 WHERE (ID_sonde, date) IN
     (
