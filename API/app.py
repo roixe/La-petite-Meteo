@@ -2,21 +2,16 @@ from flask import Flask, jsonify, request, render_template, redirect, url_for
 import mariadb
 import pandas as pd
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
+from werkzeug.exceptions import UnsupportedMediaType
 
 ATMO_URL = "http://api.atmo-aura.fr/api/v1/communes/38185/indices/atmo?api_token=b382779cc858d7828197537836213a07&date_echeance=now"
 POLLEN_URL = "https://api.ambeedata.com/latest/pollen/by-lat-lng?lat=45.1875602&lng=5.7357819"
 
 """ 
-    host="localhost",
-    user="www-data",
-    password='www-data',
-    database="lapetitemeteo"
-    host="localhost",
     port=3307,
     user="root",
     password='',
-    database="lapetitemeteo"
 """
 
 conn = mariadb.connect(
@@ -216,17 +211,20 @@ def sondes():
 @app.route('/releve', methods = ['GET', 'POST'])
 def releves():
     if request.method == "POST":
-        data = request.get_json()
-        if data is None:
-            return jsonify({'erreur': 'Aucune donnée JSON envoyée'})
-        temperature = data['temperature']
-        humidite = data['humidity']
-        now = datetime.now()
-        date = now.replace(second=00).strftime("%Y-%m-%d %H:%M:%S")
-        mac = data["MAC"]
-        sonde = check_sonde(mac)
-        cur.execute(f''' INSERT INTO releve (temperature, humidite, date, id_sonde) VALUES({temperature},{humidite},"{date}",{sonde})''') 
-        return f"Done at {now.strftime('%H:%M:%S')}!!"
+        try :
+            data = request.get_json()
+            temperature = data['temperature']
+            humidite = data['humidity']
+            now = datetime.now()
+            date = now.replace(second=00).strftime("%Y-%m-%d %H:%M:%S")
+            mac = data["MAC"]
+            sonde = check_sonde(mac)
+            cur.execute(f''' INSERT INTO releve (temperature, humidite, date, id_sonde) VALUES({temperature},{humidite},"{date}",{sonde})''') 
+            return f"Done at {now.strftime('%H:%M:%S')}!!"
+        except UnsupportedMediaType:
+            return 'Type de média non pris en charge'
+        except KeyError:
+            return 'Données manquantes'
     else :
         cur.execute(''' SELECT date, temperature, humidite FROM releve ORDER BY date DESC''')
         releves = cur.fetchall()
