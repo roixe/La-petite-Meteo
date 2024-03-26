@@ -2,3 +2,13 @@
     max-width: 1000px;
     margin: auto;
   }
+
+  .dernier-releve {
+    max-width: 1000px;
+
+    margin: auto;
+  }
+
+.form-select {
+  max-width: 250px;
+}

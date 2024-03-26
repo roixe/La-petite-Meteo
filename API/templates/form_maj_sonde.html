@@ -7,50 +7,55 @@
     <title>La petite météo</title>
 </head>
 <body>
-<form action="/maj-sonde" method = "POST">
-    <div class="container-md p-5">
-        <div class ="border rounded shadow p-2">
-        <h1>Mettre à jour une sonde</h1>
-        <div class="mb-2">
-            <label for="sonde-select">ID :</label>
-            <select class="form-select" name="sonde-select" id="sonde-select", onchange="sondeSelect(this.value)">
-                <option value="">--Choisissez une option--</option>
-                {% for sonde in sondes %}
-                <option value="{{ sonde[0] }}">{{ sonde[0] }}</option>
-                {% endfor %}
-            </select>
+    <form action="/traitement" method="POST">
+        <div class="d-grid gap-2 col-6 mx-auto mt-5">
+            <button type="submit" name="bouton" value="sondes" class="btn btn-primary btn-lg">Retour</button>
         </div>
-        <div class="mb-2 col-xs-3">
-        <label for="nom" class="form-label">Nom</label>
-        <input type="text" class="form-control" name="nom" id="nom">
+    </form>
+    <form action="/maj-sonde" method = "POST">
+        <div class="container-md p-5">
+            <div class ="border rounded shadow p-2">
+            <h1>Mettre à jour une sonde</h1>
+            <div class="mb-2">
+                <label for="sonde-select">ID :</label>
+                <select class="form-select" name="sonde-select" id="sonde-select", onchange="sondeSelect(this.value)">
+                    <option value="">--Choisissez une option--</option>
+                    {% for sonde in sondes %}
+                    <option value="{{ sonde[0] }}">{{ sonde[0] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-2 col-xs-3">
+            <label for="nom" class="form-label">Nom</label>
+            <input type="text" class="form-control" name="nom" id="nom">
+            </div>
+            <div class="mb-2 col-xs-3">
+            <label for="zone" class="form-label">Zone</label>
+            <input type="text" class="form-control" name="zone" id="zone">
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+            </div>
         </div>
-        <div class="mb-2 col-xs-3">
-        <label for="zone" class="form-label">Zone</label>
-        <input type="text" class="form-control" name="zone" id="zone">
-        </div>
-        <button type="submit" class="btn btn-primary">Submit</button>
-        </div>
-    </div>
 
-    <script>
-        function sondeSelect(sondeID) {
-            if(sondeID != '') {
-                var zone = "";
-                var nom = "";
-                {% for sonde in sondes %}
-                    if ("{{ sonde[0] }}"  === sondeID) { 
-                        zone = "{{ sonde[2] }}";
-                        nom = "{{ sonde[1] }}";
-                    }
-                {% endfor %}
-                document.getElementById('zone').value = zone;
-                document.getElementById('nom').value = nom;
-            } else {
-                document.getElementById('zone').value = "";
-                document.getElementById('nom').value = "";
+        <script>
+            function sondeSelect(sondeID) {
+                if(sondeID != '') {
+                    var zone = "";
+                    var nom = "";
+                    {% for sonde in sondes %}
+                        if ("{{ sonde[0] }}"  === sondeID) { 
+                            zone = "{{ sonde[2] }}";
+                            nom = "{{ sonde[1] }}";
+                        }
+                    {% endfor %}
+                    document.getElementById('zone').value = zone;
+                    document.getElementById('nom').value = nom;
+                } else {
+                    document.getElementById('zone').value = "";
+                    document.getElementById('nom').value = "";
+                }
             }
-        }
-    </script>
+        </script>
 
-</form>
+    </form>
 </body>
