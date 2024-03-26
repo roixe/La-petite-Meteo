@@ -154,8 +154,6 @@ def traitement():
         bouton = request.form['bouton']
         if bouton == 'maj_sonde':
             return redirect(url_for('maj_sonde'))
-        elif bouton == 'nouveau_sonde':
-            return redirect(url_for('ajouter_sonde'))
         elif bouton == "accueil":
             return redirect(url_for('index'))
         elif bouton == "sondes":
