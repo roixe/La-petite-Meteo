@@ -145,13 +145,13 @@ def get_data_from_releve(sondes):
     return data
 
 def check_sonde(mac):
-    cur.execute(f''' SELECT ID_sonde FROM sonde WHERE mac = "{mac}"''')
+    cur.execute(f''' SELECT ID_sonde FROM sonde WHERE mac_address = "{mac}"''')
     rawdata=cur.fetchall()
     if len(rawdata) == 0 :
-        cur.execute(f''' INSERT INTO sonde (nom, zone, mac) VALUES("new","new", "{mac}")''')
-        cur.execute(f''' SELECT ID_sonde FROM sonde WHERE mac = "{mac}"''')
+        cur.execute(f''' INSERT INTO sonde (nom, zone, mac_address) VALUES("new","new", "{mac}")''')
+        cur.execute(f''' SELECT ID_sonde FROM sonde WHERE mac_address = "{mac}"''')
         rawdata=cur.fetchall()
-    return rawdata[0]
+    return rawdata[0][0]
 
 app = Flask(__name__)
 
@@ -226,7 +226,12 @@ def releves():
         except KeyError:
             return 'Données manquantes'
     else :
-        cur.execute(''' SELECT date, temperature, humidite FROM releve ORDER BY date DESC''')
+        cur.execute(''' 
+                    SELECT r.date, r.temperature, r.humidite, s.nom AS nom_sonde 
+                    FROM releve r 
+                    JOIN sonde s ON r.ID_sonde = s.ID_sonde 
+                    ORDER BY r.date DESC
+        ''')
         releves = cur.fetchall()
         return render_template("releve.html", releves=releves)
 
