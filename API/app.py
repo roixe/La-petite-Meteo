@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request, render_template, redirect, url_for
 import mariadb
 import pandas as pd
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.exceptions import UnsupportedMediaType
 
 ATMO_URL = "http://api.atmo-aura.fr/api/v1/communes/38185/indices/atmo?api_token=b382779cc858d7828197537836213a07&date_echeance=now"
@@ -66,8 +66,10 @@ def get_qualite_air():
         return '0', ''
 
 def get_labels():
-    date_end = datetime(2024, 3, 24, 17, 0, 0)
+    date_end = datetime(2024, 3, 24, 17, 0, 0) 
+    #date_end = datetime.now()
     date_start = datetime(2024, 3, 10, 0, 0, 0)
+    #date_start = date_start - timedelta(days=14) 
     index_30min=pd.date_range(start=date_start, end=date_end, freq='30min')
     index_1h=pd.date_range(start=date_start, end=date_end, freq='1h')
     index_3h=pd.date_range(start=date_start, end=date_end, freq='3h')
